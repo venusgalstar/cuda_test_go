@@ -10,8 +10,6 @@ import (
 	_ "net/http/pprof"
 )
 
-package main
-
 import (
     "bufio"
     "fmt"
@@ -20,7 +18,7 @@ import (
     "strings"
 )
 
-func readFloat64FromFiles() {
+func readFloat64FromFiles() []float64 {
     // Open the file
     file, err := os.Open("aapl.txt")
     if err != nil {
@@ -57,10 +55,100 @@ func readFloat64FromFiles() {
         }
     }
 
-    // Print the data
-    fmt.Println(data)
+	return data
 }
 
+func TestTrial(t *testing.T) {
+	log.Print("TestTrial")
+	var err error
+	var dev Device
+	var cuctx CUContext
+	var mod Module
+	var fn Function
+
+	// select first GPU
+	if dev, cuctx, err = testSetup(); err != nil {
+		if err.Error() == "NoDevice" {
+			return
+		}
+		t.Fatal(err)
+	}
+
+	if mod, err = LoadData(add32PTX); err != nil {
+		t.Fatalf("Cannot load add32: %v", err)
+	}
+
+	if fn, err = mod.Function("add32"); err != nil {
+		t.Fatalf("Cannot get add32(): %v", err)
+	}
+	ctx := newContext(cuctx)
+	bctx := NewBatchedContext(ctx, dev)
+
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
+	doneChan := make(chan struct{})
+
+	a := readFloat64FromFiles();
+
+	go func() {
+		for i := range b {
+			a[i] = 1
+			b[i] = 1
+		}
+
+		size := int64(len(a) * 4)
+
+		var memA, memB DevicePtr
+		if memA, err = bctx.AllocAndCopy(unsafe.Pointer(&a[0]), size); err != nil {
+			t.Fatalf("Cannot allocate A: %v", err)
+
+		}
+
+		if memB, err = bctx.MemAlloc(size); err != nil {
+			t.Fatalf("Cannot allocate B: %v", err)
+		}
+
+		args := []unsafe.Pointer{
+			unsafe.Pointer(&memA),
+			unsafe.Pointer(&memB),
+			unsafe.Pointer(&size),
+		}
+
+		bctx.MemcpyHtoD(memB, unsafe.Pointer(&b[0]), size)
+		bctx.LaunchKernel(fn, 1, 1, 1, len(a), 1, 1, 0, Stream{}, args)
+		bctx.Synchronize()
+		bctx.MemcpyDtoH(unsafe.Pointer(&a[0]), memA, size)
+		bctx.MemcpyDtoH(unsafe.Pointer(&b[0]), memB, size)
+		bctx.MemFree(memA)
+		bctx.MemFree(memB)
+		bctx.workAvailable <- struct{}{}
+		doneChan <- struct{}{}
+	}()
+
+loop:
+	for {
+		select {
+		case <-bctx.workAvailable:
+			bctx.DoWork()
+		case <-doneChan:
+			break loop
+		}
+	}
+	if err = Synchronize(); err != nil {
+		t.Errorf("Failed to Sync %v", err)
+	}
+
+	for _, v := range a {
+		if v != float32(2) {
+			t.Errorf("Expected all values to be 2. %v", a)
+			break
+		}
+	}
+
+	mod.Unload()
+	cuctx.Destroy()
+}
 
 func TestBatchContext(t *testing.T) {
 	log.Print("BatchContext")
