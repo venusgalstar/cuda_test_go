@@ -10,6 +10,58 @@ import (
 	_ "net/http/pprof"
 )
 
+package main
+
+import (
+    "bufio"
+    "fmt"
+    "os"
+    "strconv"
+    "strings"
+)
+
+func readFloat64FromFiles() {
+    // Open the file
+    file, err := os.Open("aapl.txt")
+    if err != nil {
+        fmt.Println(err)
+        return
+    }
+    defer file.Close()
+
+    // Create a new scanner
+    scanner := bufio.NewScanner(file)
+
+    // Create a slice to hold the float64 values
+    var data []float64
+
+    // Scan each line of the file
+    for scanner.Scan() {
+        // Get the current line
+        line := scanner.Text()
+
+        // Split the line by spaces
+        values := strings.Fields(line)
+
+        // Iterate through the values
+        for _, value := range values {
+            // Convert the value to a float64
+            floatValue, err := strconv.ParseFloat(value, 64)
+            if err != nil {
+                fmt.Println(err)
+                return
+            }
+
+            // Append the float64 value to the data slice
+            data = append(data, floatValue)
+        }
+    }
+
+    // Print the data
+    fmt.Println(data)
+}
+
+
 func TestBatchContext(t *testing.T) {
 	log.Print("BatchContext")
 	var err error
