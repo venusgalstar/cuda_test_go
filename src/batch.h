@@ -64,9 +64,6 @@ typedef struct fnargs {
 
 	size_t size;
 	CUstream stream;
-	
-	uintptr_t filename;
-
 } fnargs_t;
 
 extern CUresult processFn(fnargs_t* args);

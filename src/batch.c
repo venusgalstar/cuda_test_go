@@ -162,8 +162,8 @@ void process(CUcontext ctx, uintptr_t* args, CUresult* retVal, int count){
 // }
 
 // added by sasa
-double* readDataFromFile(char * filename){
-	FILE * fp = fopen(filename, "r");
+double* readDataFromFile(){
+	FILE * fp = fopen("aapl.txt", "r");
 	double * data;
 
 	data = (double*)malloc( sizeof(double) * 84090);
