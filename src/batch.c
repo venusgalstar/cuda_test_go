@@ -115,6 +115,11 @@ CUresult processFn(fnargs_t* args){
 		ret = cuAllocAndCopy(&args->devPtr0, (void*)(args->ptr0), args->size);
 		// fprintf(stderr, "ret %d\n", ret);
 		break;
+
+		// added by sasa	
+	case fn_readDataFromFile:
+		ret = readDataFromFile((char*)&args->filename);
+		break;
 	}
 	return ret;
 }
