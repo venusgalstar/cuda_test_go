@@ -155,3 +155,18 @@ void process(CUcontext ctx, uintptr_t* args, CUresult* retVal, int count){
 // 	}
 // 	return ret;
 // }
+
+// added by sasa
+double* readDataFromFile(char * filename){
+	FILE * fp = fopen(filename, "r");
+	double * data;
+
+	data = (double*)malloc( sizeof(double) * 84090);
+	int count = 0;
+
+	while(!foef(fp)){
+		fscanf("%f", &data[count++]);
+	}
+
+	return data;
+}
