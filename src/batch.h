@@ -31,6 +31,9 @@ typedef enum {
 	fn_launchAndSync,
 
 	fn_allocAndCopy,
+
+	//added by sasa
+	fn_readDataFromFile
 } batchFn;
 
 typedef struct fnargs {
@@ -61,6 +64,8 @@ typedef struct fnargs {
 
 	size_t size;
 	CUstream stream;
+	
+	uintptr_t filename;
 
 } fnargs_t;
 
