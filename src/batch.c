@@ -115,11 +115,6 @@ CUresult processFn(fnargs_t* args){
 		ret = cuAllocAndCopy(&args->devPtr0, (void*)(args->ptr0), args->size);
 		// fprintf(stderr, "ret %d\n", ret);
 		break;
-
-		// added by sasa	
-	case fn_readDataFromFile:
-		ret = readDataFromFile((char*)&args->filename);
-		break;
 	}
 	return ret;
 }
@@ -162,16 +157,17 @@ void process(CUcontext ctx, uintptr_t* args, CUresult* retVal, int count){
 // }
 
 // added by sasa
-double* readDataFromFile(){
-	FILE * fp = fopen("aapl.txt", "r");
-	double * data;
+// double* readDataFromFile(){
+// 	FILE * fp = fopen("aapl.txt", "r");
+// 	double * data;
 
-	data = (double*)malloc( sizeof(double) * 84090);
-	int count = 0;
+// 	data = (double*)malloc( sizeof(double) * 84090);
+// 	int count = 0;
 
-	while(!foef(fp)){
-		fscanf("%f", &data[count++]);
-	}
+// 	while(!feof(fp)){
+// 		fscanf('%e', &data[count]);
+// 		count++;
+// 	}
 
-	return data;
-}
+// 	return data;
+// }

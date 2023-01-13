@@ -1,6 +1,12 @@
 package cu
 
 import (
+	"bufio"
+    "fmt"
+    "os"
+    "strconv"
+    "strings"
+
 	"log"
 	"runtime"
 	"sync/atomic"
@@ -8,30 +14,28 @@ import (
 	"unsafe"
 
 	_ "net/http/pprof"
+
+	
 )
 
-import (
-    "bufio"
-    "fmt"
-    "os"
-    "strconv"
-    "strings"
-)
 
-func readFloat64FromFiles() []float64 {
+func readFloat64FromFiles() ([]float64, error) {
+	
+	// Create a slice to hold the float64 values
+    var data []float64
+
     // Open the file
     file, err := os.Open("aapl.txt")
+
     if err != nil {
         fmt.Println(err)
-        return
+        return data, err
     }
+
     defer file.Close()
 
     // Create a new scanner
     scanner := bufio.NewScanner(file)
-
-    // Create a slice to hold the float64 values
-    var data []float64
 
     // Scan each line of the file
     for scanner.Scan() {
@@ -47,7 +51,7 @@ func readFloat64FromFiles() []float64 {
             floatValue, err := strconv.ParseFloat(value, 64)
             if err != nil {
                 fmt.Println(err)
-                return
+                return data, err
             }
 
             // Append the float64 value to the data slice
@@ -55,7 +59,7 @@ func readFloat64FromFiles() []float64 {
         }
     }
 
-	return data
+	return data, err
 }
 
 func TestTrial(t *testing.T) {
