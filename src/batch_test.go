@@ -1,6 +1,12 @@
 package cu
 
 import (
+	"bufio"
+    "fmt"
+    "os"
+    "strconv"
+    "strings"
+
 	"log"
 	"runtime"
 	"sync/atomic"
@@ -8,30 +14,28 @@ import (
 	"unsafe"
 
 	_ "net/http/pprof"
+
+	
 )
 
-import (
-    "bufio"
-    "fmt"
-    "os"
-    "strconv"
-    "strings"
-)
 
-func readFloat64FromFiles() []float64 {
+func readFloat64FromFiles() ([]float64, error) {
+	
+	// Create a slice to hold the float64 values
+    var data []float64
+
     // Open the file
     file, err := os.Open("aapl.txt")
+
     if err != nil {
         fmt.Println(err)
-        return
+        return data, err
     }
+
     defer file.Close()
 
     // Create a new scanner
     scanner := bufio.NewScanner(file)
-
-    // Create a slice to hold the float64 values
-    var data []float64
 
     // Scan each line of the file
     for scanner.Scan() {
@@ -47,7 +51,7 @@ func readFloat64FromFiles() []float64 {
             floatValue, err := strconv.ParseFloat(value, 64)
             if err != nil {
                 fmt.Println(err)
-                return
+                return data, err
             }
 
             // Append the float64 value to the data slice
@@ -55,7 +59,7 @@ func readFloat64FromFiles() []float64 {
         }
     }
 
-	return data
+	return data, err
 }
 
 func TestTrial(t *testing.T) {
@@ -89,65 +93,38 @@ func TestTrial(t *testing.T) {
 
 	doneChan := make(chan struct{})
 
-	a := readFloat64FromFiles();
+	var a []float64
 
-	go func() {
-		for i := range b {
-			a[i] = 1
-			b[i] = 1
-		}
-
-		size := int64(len(a) * 4)
-
-		var memA, memB DevicePtr
-		if memA, err = bctx.AllocAndCopy(unsafe.Pointer(&a[0]), size); err != nil {
-			t.Fatalf("Cannot allocate A: %v", err)
-
-		}
-
-		if memB, err = bctx.MemAlloc(size); err != nil {
-			t.Fatalf("Cannot allocate B: %v", err)
-		}
-
-		args := []unsafe.Pointer{
-			unsafe.Pointer(&memA),
-			unsafe.Pointer(&memB),
-			unsafe.Pointer(&size),
-		}
-
-		bctx.MemcpyHtoD(memB, unsafe.Pointer(&b[0]), size)
-		bctx.LaunchKernel(fn, 1, 1, 1, len(a), 1, 1, 0, Stream{}, args)
-		bctx.Synchronize()
-		bctx.MemcpyDtoH(unsafe.Pointer(&a[0]), memA, size)
-		bctx.MemcpyDtoH(unsafe.Pointer(&b[0]), memB, size)
-		bctx.MemFree(memA)
-		bctx.MemFree(memB)
-		bctx.workAvailable <- struct{}{}
-		doneChan <- struct{}{}
-	}()
-
-loop:
-	for {
-		select {
-		case <-bctx.workAvailable:
-			bctx.DoWork()
-		case <-doneChan:
-			break loop
-		}
-	}
-	if err = Synchronize(); err != nil {
-		t.Errorf("Failed to Sync %v", err)
+	if a, err = readFloat64FromFiles(); err != nil{
+		bench.Fatalf("Failed to allocate for a: %v", err)
 	}
 
-	for _, v := range a {
-		if v != float32(2) {
-			t.Errorf("Expected all values to be 2. %v", a)
-			break
-		}
+	size := int64(len(a) * 8)
+
+	b := make([]float64, len(a))
+
+	var memA DevicePtr
+	if memA, err = MemAlloc(size); err != nil {
+		bench.Fatalf("Failed to allocate for a: %v", err)
 	}
 
+	args := []unsafe.Pointer{
+		unsafe.Pointer(&memA),
+		unsafe.Pointer(&size),
+	}
+
+	// ACTUAL BENCHMARK STARTS HERE	
+	if err = MemcpyHtoD(memA, unsafe.Pointer(&a[0]), size); err != nil {
+		bench.Fatalf("Failed to copy memory from a: %v", err)
+	}
+
+	if err = MemcpyDtoH(unsafe.Pointer(&b[0]), memA, size); err != nil {
+		bench.Fatalf("Failed to copy memory from a: %v", err)
+	}
+
+	MemFree(memA)
 	mod.Unload()
-	cuctx.Destroy()
+	ctx.Destroy()
 }
 
 func TestBatchContext(t *testing.T) {
